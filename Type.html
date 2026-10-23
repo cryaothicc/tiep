@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Type</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap">
+<style>
+:root{--bg:#fafaf9;--surface:#f0efed;--text:#b4b0aa;--fg:#1c1917;--accent:#1c1917;--err:#dc2626;--line:#d6d3d1;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121212;--surface:#1c1c1c;--text:#5c5955;--fg:#e7e5e4;--accent:#e7e5e4;--err:#f87171;--line:#333;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121212;--surface:#1c1c1c;--text:#5c5955;--fg:#e7e5e4;--accent:#e7e5e4;--err:#f87171;--line:#333;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;display:flex;justify-content:center}
+main{width:100%;max-width:960px;padding:40px 24px;display:flex;flex-direction:column;min-height:100vh;gap:40px}
+header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+h1{margin:0;font-size:.95rem;font-weight:500;color:var(--fg)}
+.bar{display:flex;gap:4px;align-self:center;flex-wrap:wrap;justify-content:center}
+.bar button{background:none;border:0;color:var(--text);font:inherit;font-size:.8rem;padding:4px 8px;cursor:pointer;border-radius:4px}
+.bar button:hover{color:var(--fg)}
+.bar button.on{color:var(--fg);text-decoration:underline;text-underline-offset:6px}
+:focus-visible{outline:1px solid var(--fg);outline-offset:3px}
+#live{font-size:1.2rem;color:var(--fg);height:2rem;visibility:hidden}
+#live.run{visibility:visible}
+#words{position:relative;font-size:1.6rem;line-height:2.4rem;height:7.2rem;overflow:hidden;user-select:none;cursor:text;display:flex;flex-wrap:wrap;align-content:flex-start;gap:0 .9ch}
+#words.blur{filter:blur(4px)}
+.w{display:inline-block;position:relative}
+.w.bad{border-bottom:2px solid var(--err)}
+.l.ok{color:var(--fg)}
+.l.no{color:var(--err)}
+.l.ex{color:var(--err);opacity:.6}
+.caret{position:absolute;width:2px;height:1.8rem;background:var(--fg);transition:left .08s,top .08s;animation:blink 1s infinite}
+.typing .caret{animation:none}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.caret{animation:none;transition:none}}
+#hint{text-align:center;font-size:.75rem;margin:0}
+kbd{font:inherit;color:var(--fg);border-bottom:1px solid var(--text)}
+#input{position:absolute;opacity:0;pointer-events:none}
+#result{display:none;flex-direction:column;gap:32px}
+#result.show{display:flex}
+.stats{display:flex;gap:56px;flex-wrap:wrap;align-items:flex-end}
+.n{color:var(--fg);line-height:1;font-weight:300}
+.big .n{font-size:4rem}
+.sm .n{font-size:1.6rem}
+.big .k,.sm .k{font-size:.75rem;margin-top:8px}
+#chart{width:100%;height:200px}
+.again{align-self:flex-start;background:none;border:0;border-bottom:1px solid var(--text);color:var(--fg);font:inherit;font-size:.8rem;padding:4px 0;cursor:pointer}
+#test.hide{display:none}
+.acts{display:flex;gap:36px;flex-wrap:wrap}
+.again kbd{border:0;color:var(--text);font-size:.7rem}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+#result.go .stats>div{animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
+#result.go .stats>div:nth-child(2){animation-delay:.08s}
+#result.go .stats>div:nth-child(3){animation-delay:.16s}
+#result.go .stats>div:nth-child(4){animation-delay:.24s}
+#result.go .stats>div:nth-child(5){animation-delay:.32s}
+#result.go #chart{animation:rise .7s .3s cubic-bezier(.2,.7,.2,1) both}
+#result.go .acts{animation:rise .6s .7s cubic-bezier(.2,.7,.2,1) both}
+@media (prefers-reduced-motion:reduce){#result.go *{animation:none!important}}
+.kbw{perspective:900px;margin:48px auto 0;width:max-content;max-width:100%;padding-bottom:8px}
+.kb{--k:min(38px,7vw);--g:min(6px,1.2vw);transform:rotateX(35deg);transform-origin:50% 100%;display:flex;flex-direction:column;gap:var(--g)}
+.kr{display:flex;gap:var(--g)}
+.kr:nth-child(2){margin-left:calc(var(--k)*.4)}
+.kr:nth-child(3){margin-left:calc(var(--k)*.7)}
+.kr:nth-child(4){margin-left:calc(var(--k)*1.2)}
+.key{width:var(--k);height:var(--k);border-radius:6px;border:1px solid var(--line);box-shadow:0 3px 0 var(--line);display:grid;place-items:center;font-size:.7rem;color:var(--text);transition:transform .08s,background .3s,color .3s,border-color .3s}
+.key.sp{width:calc(var(--k)*6);margin:0 auto}
+.key.dn{transform:translateY(3px);box-shadow:0 0 0 var(--line);background:var(--fg);color:var(--bg);border-color:var(--fg);transition:transform .03s,background 0s}
+@media (prefers-reduced-motion:reduce){.key{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>type</h1>
+<div class="bar" id="modes" role="group" aria-label="Mode">
+<button data-m="time" class="on">time</button><button data-m="words">words</button>
+</div>
+<div class="bar"><button id="snd" class="on" aria-pressed="true">sound: on</button></div>
+</header>
+<div class="bar" id="opts" role="group" aria-label="Length"></div>
+
+<section id="test">
+<div id="live" aria-live="off">30</div>
+<div id="words" tabindex="0" role="textbox" aria-label="Typing area"></div>
+<input id="input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type here">
+<p id="hint">Click the words and start typing. <kbd>tab</kbd> + <kbd>enter</kbd> starts a new test, <kbd>tab</kbd> + <kbd>r</kbd> repeats this one.</p>
+<div class="kbw" aria-hidden="true"><div class="kb" id="kb"></div></div>
+</section>
+
+<section id="result" aria-live="polite">
+<div class="stats">
+<div class="big"><div class="n" id="rWpm">0</div><div class="k">wpm</div></div>
+<div class="big"><div class="n" id="rAcc">0%</div><div class="k">accuracy</div></div>
+<div class="sm"><div class="n" id="rRaw">0</div><div class="k">raw wpm</div></div>
+<div class="sm"><div class="n" id="rChars">0</div><div class="k">correct / wrong / extra</div></div>
+<div class="sm"><div class="n" id="rTime">0s</div><div class="k">time</div></div>
+</div>
+<canvas id="chart" aria-label="Words per minute over time"></canvas>
+<div class="acts"><button class="again" id="next">next <kbd>tab</kbd> + <kbd>enter</kbd></button><button class="again" id="rep">repeat <kbd>tab</kbd> + <kbd>r</kbd></button></div>
+</section>
+</main>
+<script>
+const WORDS="the be of and a to in he have it that for they with as not on she at by this we you do but from or which one would all will there say who make when can more if no man out other so what time up go about than into could state only new year some take come these know see use get like then first any work now may such give over think most even find day also after way many must look before great back through long where much should well people down own just because good each those feel seem how high too place little world very still nation hand old life tell write become here show house both between need mean call develop under last right move thing general school never same another begin while number part turn real leave might want point form off child few small since against ask late home interest large person end open public follow during present without again hold govern around possible head consider word program problem however lead system set order eye plan run keep face fact group play stand increase early course change help line".split(" ");
+const $=id=>document.getElementById(id);
+const wordsEl=$("words"),input=$("input"),live=$("live");
+let mode="time",len=30,list=[],wi=0,typed=[],started=false,start=0,timer=null,done=false,samples=[],errTotal=0,keyTotal=0,caret;
+const OPTS={time:[15,30,60,120],words:[10,25,50,100]};
+function rnd(n){const a=[];for(let i=0;i<n;i++)a.push(WORDS[Math.random()*WORDS.length|0]);return a}
+function buildOpts(){const o=$("opts");o.innerHTML="";OPTS[mode].forEach(v=>{const b=document.createElement("button");b.textContent=v;if(v===len)b.className="on";b.onclick=()=>{len=v;buildOpts();reset()};o.appendChild(b)})}
+function reset(keep){
+clearInterval(timer);started=false;done=false;wi=0;samples=[];errTotal=0;keyTotal=0;
+if(!keep||!list.length)list=rnd(mode==="time"?120:len);typed=list.map(()=>"");
+$("result").classList.remove("show","go");$("test").classList.remove("hide");
+live.classList.remove("run");live.textContent=mode==="time"?len:"0/"+len;
+render();input.value="";focus()}
+function render(){
+wordsEl.innerHTML="";
+list.forEach((w,i)=>{const s=document.createElement("span");s.className="w";s.id="w"+i;
+for(const c of w){const l=document.createElement("span");l.className="l";l.textContent=c;s.appendChild(l)}
+wordsEl.appendChild(s)});
+caret=document.createElement("span");caret.className="caret";wordsEl.appendChild(caret);
+for(let i=0;i<=wi;i++)paint(i);place()}
+function paint(i){
+const s=$("w"+i);if(!s)return;const w=list[i],t=typed[i];
+s.querySelectorAll(".ex").forEach(e=>e.remove());
+const ls=s.querySelectorAll(".l:not(.ex)");
+ls.forEach((l,k)=>{l.className="l"+(k<t.length?(t[k]===w[k]?" ok":" no"):"")});
+for(let k=w.length;k<t.length;k++){const l=document.createElement("span");l.className="l ex";l.textContent=t[k];s.appendChild(l)}
+s.classList.toggle("bad",i<wi&&t!==w)}
+function place(){
+const s=$("w"+wi);if(!s)return;const t=typed[wi],ls=s.querySelectorAll(".l");
+let x,y=s.offsetTop;
+if(t.length===0){x=s.offsetLeft}else{const l=ls[Math.min(t.length,ls.length)-1];x=s.offsetLeft+l.offsetLeft+l.offsetWidth}
+caret.style.left=x+"px";caret.style.top=(y+4)+"px";
+const line=Math.round(y/38.4);
+if(line>=2){const rows=[...new Set([...wordsEl.querySelectorAll(".w")].map(e=>e.offsetTop))];
+const first=rows[0];let rm=0;
+for(let i=0;i<wi;i++){const e=$("w"+i);if(e&&e.style.display!=="none"&&e.offsetTop===first)rm++}
+if(rows.length>2&&y>rows[1]){for(let i=0;i<wi;i++){const e=$("w"+i);if(e&&e.style.display!=="none"&&e.offsetTop===first)e.style.display="none"}requestAnimationFrame(place)}}}
+function focus(){input.focus({preventScroll:true});wordsEl.classList.remove("blur")}
+function begin(){started=true;start=performance.now();live.classList.add("run");
+timer=setInterval(tick,1000)}
+function tick(){
+const el=(performance.now()-start)/1000;
+samples.push({t:Math.round(el),wpm:calc(el).wpm,raw:calc(el).raw});
+if(mode==="time"){const left=Math.max(0,len-Math.floor(el));live.textContent=left;if(el>=len)finish(len)}
+else live.textContent=wi+"/"+len}
+function calc(el){
+let c=0,wr=0,ex=0,all=0;
+for(let i=0;i<=wi&&i<list.length;i++){const w=list[i],t=typed[i];if(!t&&i===wi)continue;
+const okWord=t===w;
+for(let k=0;k<t.length;k++){if(k<w.length){t[k]===w[k]?c++:wr++}else ex++}
+if(i<wi&&okWord)c++;all+=t.length+(i<wi?1:0)}
+const m=Math.max(el,1)/60;
+return{wpm:Math.round(c/5/m),raw:Math.round(all/5/m),c,wr,ex}}
+let armed=false,armT;
+const RM=()=>matchMedia("(prefers-reduced-motion:reduce)").matches;
+function anim(fn,ms,d){if(RM()){fn(1);return}const s=performance.now()+d;(function f(n){const p=Math.min(1,Math.max(0,(n-s)/ms));fn(1-Math.pow(1-p,3));if(p<1)requestAnimationFrame(f)})(performance.now())}
+const countUp=(el,to,suf,ms,d)=>anim(p=>{el.textContent=Math.round(to*p)+suf},ms,d);
+function finish(el){
+if(done)return;done=true;clearInterval(timer);
+const r=calc(el),acc=keyTotal?Math.max(0,Math.round((keyTotal-errTotal)/keyTotal*100)):100;
+countUp($("rWpm"),r.wpm,"",1000,100);countUp($("rAcc"),acc,"%",1000,200);countUp($("rRaw"),r.raw,"",1000,300);
+$("rChars").textContent=r.c+"/"+r.wr+"/"+r.ex;$("rTime").textContent=Math.round(el)+"s";
+$("test").classList.add("hide");$("result").classList.add("show");
+if(!samples.length||samples[samples.length-1].t<Math.round(el))samples.push({t:Math.round(el),wpm:r.wpm,raw:r.raw});
+const res=$("result");res.classList.remove("go");void res.offsetWidth;res.classList.add("go");
+anim(draw,1000,300)}
+function draw(p=1){
+const c=$("chart"),d=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*d;c.height=h*d;
+const g=c.getContext("2d");g.scale(d,d);g.clearRect(0,0,w,h);
+const cs=getComputedStyle(document.documentElement),acc=cs.getPropertyValue("--accent"),tx=cs.getPropertyValue("--text");
+if(samples.length<2)return;
+const pad=32,max=Math.max(10,...samples.map(s=>Math.max(s.wpm,s.raw)))*1.15,T=samples[samples.length-1].t||1;
+const X=t=>pad+(t/T)*(w-pad*2),Y=v=>h-pad-(v/max)*(h-pad*2);
+g.strokeStyle=tx;g.fillStyle=tx;g.globalAlpha=.4;g.font="11px monospace";
+for(let i=0;i<=4;i++){const v=max*i/4,y=Y(v);g.beginPath();g.moveTo(pad,y);g.lineTo(w-pad,y);g.stroke();g.fillText(Math.round(v),2,y+4)}
+g.globalAlpha=1;
+const line=(k,col,dash)=>{g.strokeStyle=col;g.lineWidth=2;g.setLineDash(dash);g.beginPath();samples.forEach((s,i)=>i?g.lineTo(X(s.t),Y(s[k])):g.moveTo(X(s.t),Y(s[k])));g.stroke()};
+g.save();g.beginPath();g.rect(0,0,pad+(w-pad*2)*p+2,h);g.clip();line("raw",tx,[4,4]);line("wpm",acc,[]);g.restore();g.setLineDash([]);g.fillStyle=tx;g.fillText(T+"s",w-pad-12,h-10)}
+input.addEventListener("input",()=>{
+if(done)return;
+let v=input.value;
+if(v.endsWith(" ")){
+ if(typed[wi]===""){input.value="";return}
+ const cur=typed[wi];keyTotal++;if(cur!==list[wi])errTotal++;
+ wi++;input.value="";typed[wi]=typed[wi]||"";
+ for(let i=wi-1;i<=wi;i++)paint(i);place();
+ if(mode==="words"){live.textContent=wi+"/"+len;if(wi>=len)finish((performance.now()-start)/1000)}
+ return}
+if(!started)begin();
+const prev=typed[wi];typed[wi]=v;
+if(v.length>prev.length){keyTotal++;const k=v.length-1;if(v[k]!==list[wi][k])errTotal++}
+if(mode==="words"&&wi===len-1&&v===list[wi]){paint(wi);finish((performance.now()-start)/1000);return}
+paint(wi);place();wordsEl.classList.add("typing");clearTimeout(input._t);input._t=setTimeout(()=>wordsEl.classList.remove("typing"),600)});
+input.addEventListener("keydown",e=>{
+if(e.key==="Backspace"&&input.value===""&&wi>0&&!done){
+ const p=typed[wi-1];if(p!==list[wi-1]){e.preventDefault();wi--;input.value=p;typed[wi]=p;paint(wi);paint(wi+1);place()}}});
+document.addEventListener("keydown",e=>{
+if(e.key==="Tab"){e.preventDefault();armed=true;clearTimeout(armT);armT=setTimeout(()=>armed=false,1500);return}
+if(armed&&(e.key==="Enter"||e.key.toLowerCase()==="r")){e.preventDefault();armed=false;reset(e.key!=="Enter");return}
+if(!done&&document.activeElement!==input&&!e.ctrlKey&&!e.metaKey&&e.key.length===1)focus()});
+wordsEl.addEventListener("click",focus);
+input.addEventListener("blur",()=>{if(!done)wordsEl.classList.add("blur")});
+input.addEventListener("focus",()=>wordsEl.classList.remove("blur"));
+$("next").onclick=()=>reset();$("rep").onclick=()=>reset(true);
+$("modes").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+mode=b.dataset.m;len=OPTS[mode][1];$("modes").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));buildOpts();reset()});
+addEventListener("resize",()=>{if(!done)place();else draw()});
+/* keyboard + sound */
+const keyMap={};
+["1234567890","qwertyuiop","asdfghjkl","zxcvbnm,."," "].forEach(r=>{
+const row=document.createElement("div");row.className="kr";
+[...r].forEach(c=>{const k=document.createElement("div");k.className="key"+(c===" "?" sp":"");k.textContent=c===" "?"":c;keyMap[c]=k;row.appendChild(k)});
+$("kb").appendChild(row)});
+let ac,sound=true,nbuf;
+function thock(deep){
+if(!sound)return;
+ac=ac||new(window.AudioContext||window.webkitAudioContext)();
+if(ac.state==="suspended")ac.resume();
+if(!nbuf){nbuf=ac.createBuffer(1,ac.sampleRate*.05,ac.sampleRate);const d=nbuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+const t=ac.currentTime,j=1+(Math.random()-.5)*.18,m=deep?.75:1;
+const o=ac.createOscillator(),og=ac.createGain();
+o.type="sine";o.frequency.setValueAtTime(210*j*m,t);o.frequency.exponentialRampToValueAtTime(70,t+.09);
+og.gain.setValueAtTime(.55,t);og.gain.exponentialRampToValueAtTime(.001,t+.16);
+o.connect(og).connect(ac.destination);o.start(t);o.stop(t+.17);
+const n=ac.createBufferSource();n.buffer=nbuf;
+const f=ac.createBiquadFilter();f.type="bandpass";f.frequency.value=1400*j*m;f.Q.value=.9;
+const ng=ac.createGain();ng.gain.setValueAtTime(.3,t);ng.gain.exponentialRampToValueAtTime(.001,t+.04);
+n.connect(f).connect(ng).connect(ac.destination);n.start(t)}
+function kname(e){return e.key.length===1?e.key.toLowerCase():e.key}
+addEventListener("keydown",e=>{
+if(e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;
+const k=kname(e);
+if(keyMap[k])keyMap[k].classList.add("dn");
+if(e.key.length===1||e.key==="Backspace")thock(e.key===" "||e.key==="Backspace")});
+addEventListener("keyup",e=>{const k=kname(e);if(keyMap[k])keyMap[k].classList.remove("dn")});
+$("snd").onclick=function(){sound=!sound;this.textContent="sound: "+(sound?"on":"off");this.classList.toggle("on",sound);this.setAttribute("aria-pressed",sound)};
+buildOpts();reset();
+</script>
+</body>
+</html>
