@@ -207,6 +207,9 @@ header,#hint{transition:opacity .3s}
   box-shadow:0 0 0 #080602;
   background:var(--ph);color:#000;border-color:var(--ph);
   transition:transform .03s,background 0s}
+.kb{position:relative}
+.key{position:relative;z-index:0}
+.gl{position:absolute;inset:-2px;border-radius:8px;pointer-events:none;z-index:-1;opacity:0;background:radial-gradient(circle,rgba(255,176,0,.95) 0,rgba(255,176,0,.35) 45%,rgba(255,176,0,0) 75%)}
 /* keyboard base/plate */
 .kb-plate{
   background:#0e0a03;border:1px solid var(--line);border-top:none;
@@ -553,7 +556,7 @@ function finish(el){
   $("test").classList.add("hide");$("result").classList.add("show");
   if(!samples.length||samples[samples.length-1].t<Math.round(el))samples.push({t:Math.round(el),wpm:r.wpm,raw:r.raw});
   const res=$("result");res.classList.remove("go");void res.offsetWidth;res.classList.add("go");
-  heat();$("drill").style.display=weakKeys().length?"":"none";anim(draw,1000,300)}
+  heat();buildTrail(0);replay();$("drill").style.display=weakKeys().length?"":"none";anim(draw,1000,300)}
 function heat(){
   let mx=0.12;for(const c in keyMap){const s=keyStats[c];if(s&&s.t)mx=Math.max(mx,s.e/s.t)}
   for(const c in keyMap){const el=keyMap[c],s=keyStats[c];el.style.background=s&&s.t>=3?"rgba(255,77,77,"+Math.min(.85,(s.e/s.t)/mx*.85).toFixed(2)+")":""}
@@ -575,14 +578,14 @@ function draw(p=1){
 /* ── input ── */
 function kname(e){return e.key.length===1?e.key.toLowerCase():e.key}
 addEventListener("keydown",e=>{
-  if(!e.repeat){const k=kname(e);if(keyMap[k])keyMap[k].classList.add("dn");if(e.key.length===1||e.key==="Backspace"||e.key==="Enter")thock(e.key===" "||e.key==="Backspace")}
+  if(!e.repeat){const k=kname(e);if(keyMap[k]){keyMap[k].classList.add("dn");if(!done&&!armed&&!e.ctrlKey&&!e.metaKey&&!e.altKey)trail.push(k)}if(e.key.length===1||e.key==="Backspace"||e.key==="Enter")thock(e.key===" "||e.key==="Backspace")}
   if(e.key==="Tab"){e.preventDefault();armed=true;clearTimeout(armT);armT=setTimeout(()=>armed=false,1500);return}
   if(armed&&(e.key==="Enter"||e.key.toLowerCase()==="r")){e.preventDefault();armed=false;reset(e.key!=="Enter");return}
   if(e.ctrlKey||e.metaKey||e.altKey)return;
   if(e.key==="Backspace"){e.preventDefault();if(!done){mode==="words"?backWord():backCode()}return}
   if(e.key==="Enter"){e.preventDefault();if(!done&&mode==="code")typeCode("\n");return}
   if(e.key.length===1){e.preventDefault();if(!done){if(document.activeElement!==area)area.focus({preventScroll:true});mode==="words"?typeWord(e.key):typeCode(e.key)}}});
-addEventListener("keyup",e=>{const k=kname(e);if(keyMap[k])keyMap[k].classList.remove("dn")});
+addEventListener("keyup",e=>{const k=kname(e);if(keyMap[k])keyMap[k].classList.remove("dn");if(e.key.length===1||e.key==="Backspace"||e.key==="Enter")release(e.key===" "||e.key==="Backspace")});
 area.addEventListener("click",()=>area.focus({preventScroll:true}));
 area.addEventListener("focus",()=>area.classList.remove("unfocused"));
 area.addEventListener("blur",()=>{if(!done)area.classList.add("unfocused")});
@@ -601,7 +604,7 @@ $("panelbtn").onclick=function(){const p=$("panel");p.classList.toggle("hide");t
 /* ── reset ── */
 function reset(keep){
   clearInterval(timer);clearInterval(panelTick);
-  setFocus(false);started=false;done=false;wi=0;samples=[];keyTotal=0;errTotal=0;armed=false;miniSamples.length=0;
+  trail.length=0;clearTrail();setFocus(false);started=false;done=false;wi=0;samples=[];keyTotal=0;errTotal=0;armed=false;miniSamples.length=0;
   live.classList.remove("run");
   if(mode==="words"){if(drillNext){list=genDrill();drillNext=false}else if(!keep||!list.length)list=genWords(200);typed=list.map(()=>"");renderWords()}
   else{if(!keep||!text)text=genCode();typedCode="";renderCode()}
@@ -620,8 +623,46 @@ const keyMap={};
   $("kb").appendChild(row)});
 // size the plate to match keyboard width
 requestAnimationFrame(()=>{const kbEl=$("kb");if(kbEl)$("kb-plate").style.width=kbEl.offsetWidth+"px"});
+const trail=[],gl={};let tsvg,tl=[],seq=[],lv={},rid=0;
+function buildTrail(p){
+  for(const c in keyMap){if(!gl[c]){const g=document.createElement("i");g.className="gl";keyMap[c].appendChild(g);gl[c]=g}}
+  seq=trail.slice();lv={};const cnt={};let mx=1;
+  seq.forEach(c=>{cnt[c]=(cnt[c]||0)+1;mx=Math.max(mx,cnt[c])});
+  for(const c in cnt)lv[c]=.2+.6*cnt[c]/mx;
+  for(const c in gl)gl[c].style.cssText=p?"opacity:"+(lv[c]||0):""}
+function clearTrail(){rid++;for(const c in gl)gl[c].style.cssText=""}
+function pulse(c){const g=gl[c],k=keyMap[c];if(!g)return;g.style.transition="none";g.style.opacity=1;void g.offsetWidth;g.style.transition="opacity .9s ease-out";g.style.opacity=lv[c]||0;k.classList.add("dn");setTimeout(()=>k.classList.remove("dn"),70)}
+function replay(){
+  const id=++rid,n=seq.length;if(!n)return;
+  if(RM()){buildTrail(1);return}
+  const dur=Math.min(3200,Math.max(900,n*55)),t0=performance.now()+300;let k=0;
+  (function f(now){if(id!==rid)return;const idx=Math.min(n,Math.floor((now-t0)/dur*n));while(k<idx){pulse(seq[k]);k++}if(k<n)requestAnimationFrame(f)})(performance.now())}
 let ac,nbuf;
+let nb2;
+function audioInit(){ac=ac||new(window.AudioContext||window.webkitAudioContext)();if(ac.state==="suspended")ac.resume();if(!nb2){nb2=ac.createBuffer(1,ac.sampleRate*.15,ac.sampleRate);const d=nb2.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}}
+function noiseHit(t,type,freq,q,gain,dur,delay=0){const s=ac.createBufferSource();s.buffer=nb2;const f=ac.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;const g=ac.createGain();g.gain.setValueAtTime(gain,t+delay);g.gain.exponentialRampToValueAtTime(.0001,t+delay+dur);s.connect(f).connect(g).connect(ac.destination);s.start(t+delay,Math.random()*.05);s.stop(t+delay+dur+.02)}
+function tone(t,f0,f1,gain,dur){const o=ac.createOscillator(),g=ac.createGain();o.type="sine";o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur*.8);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+dur+.02)}
 function thock(deep){
+  if(!sound)return;audioInit();
+  const t=ac.currentTime,v=.8+Math.random()*.4,f=1+(Math.random()-.5)*.12;
+  if(deep){
+    noiseHit(t,"highpass",2400*f,.5,.3*v,.016);
+    noiseHit(t,"bandpass",1100*f,.6,.4*v,.05);
+    noiseHit(t,"lowpass",450*f,.7,.6*v,.08);
+    tone(t,115*f,70*f,.45*v,.11);
+    noiseHit(t,"bandpass",3800*f,2,.12*v,.02,.018)
+  }else{
+    noiseHit(t,"highpass",3200*f,.7,.35*v,.012);
+    noiseHit(t,"bandpass",1800*f,1.2,.4*v,.03);
+    noiseHit(t,"lowpass",700*f,.8,.55*v,.05);
+    tone(t,160*f,95*f,.35*v,.07)
+  }}
+function release(deep){
+  if(!sound)return;audioInit();
+  const t=ac.currentTime,v=.8+Math.random()*.4,f=1+(Math.random()-.5)*.12;
+  noiseHit(t,"highpass",2600*f,.6,.1*v,.008);
+  noiseHit(t,"bandpass",deep?900*f:1500*f,1,.18*v,.022)}
+function thockOld(deep){
   if(!sound)return;ac=ac||new(window.AudioContext||window.webkitAudioContext)();if(ac.state==="suspended")ac.resume();
   if(!nbuf){nbuf=ac.createBuffer(1,ac.sampleRate*.05,ac.sampleRate);const d=nbuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
   const t=ac.currentTime,j=1+(Math.random()-.5)*.18,m=deep?.75:1;
@@ -629,7 +670,7 @@ function thock(deep){
   og.gain.setValueAtTime(.55,t);og.gain.exponentialRampToValueAtTime(.001,t+.16);o.connect(og).connect(ac.destination);o.start(t);o.stop(t+.17);
   const n=ac.createBufferSource();n.buffer=nbuf;const f=ac.createBiquadFilter();f.type="bandpass";f.frequency.value=1400*j*m;f.Q.value=.9;
   const ng=ac.createGain();ng.gain.setValueAtTime(.3,t);ng.gain.exponentialRampToValueAtTime(.001,t+.04);n.connect(f).connect(ng).connect(ac.destination);n.start(t)}
-addEventListener("resize",()=>{if(done)draw();else if(mode==="words")place();else placeCode();updateMiniChart()});
+addEventListener("resize",()=>{if(done){draw();buildTrail(1)}else if(mode==="words")place();else placeCode();updateMiniChart()});
 reset();
 </script>
 </body>
